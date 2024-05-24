@@ -1,13 +1,68 @@
-//If we want to add another page like whiteboard page add the page at this src/component folder as whiteboard
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Client from "./Client";
 import Editor from "./Editor";
+import {
+  useLocation,
+  useParams,
+  useNavigate,
+  Navigate,
+} from "react-router-dom";
+import { initSocket } from "../socket";
+import { toast } from "react-hot-toast";
 
 function EditorPage() {
-  const [clients, setClients] = useState([
-    { socketId: 1, username: "Aman" },
-    { socketId: 2, username: "Jha" },
-  ]);
+  const [clients, setClients] = useState([]);
+
+  const socketRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { roomId } = useParams();
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        socketRef.current = await initSocket();
+        socketRef.current.on("connect_error", handleErrors);
+        socketRef.current.on("connect_failed", handleErrors);
+
+        // Join the room
+        socketRef.current.emit("join", {
+          roomId,
+          username: location.state?.username,
+        });
+
+        // Listen for new clients joining the chatroom
+        socketRef.current.on("joined", ({ clients, username, socketId }) => {
+          // this insure that new user connected message do not display to that user itself
+          if (username !== Location.state?.username) {
+            toast.success(`${username} joined the room.`);
+          }
+          setClients(clients);
+          // // also send the code to sync
+          // socketRef.current.emit(ACTIONS.SYNC_CODE, {
+          //   code: codeRef.current,
+          //   socketId,
+          // });
+        });
+
+        console.log("Socket initialized:", socketRef.current);
+      } catch (err) {
+        handleErrors(err);
+      }
+    };
+
+    const handleErrors = (err) => {
+      console.log("Error", err);
+      toast.error("Socket connection failed, Try again later");
+      navigate("/");
+    };
+
+    init();
+  }, [location, navigate, roomId]);
+
+  if (!location.state) {
+    return <Navigate to="/" />;
+  }
 
   return (
     <div className="container-fluid vh-100">
@@ -23,7 +78,7 @@ function EditorPage() {
             style={{ maxWidth: "150px", marginTop: "15px" }}
           />
           <hr />
-          {/* client list container*/}
+          {/* client list container */}
           <div className="d-flex flex-column overflow-auto">
             {clients.map((client) => (
               <Client key={client.socketId} username={client.username} />
