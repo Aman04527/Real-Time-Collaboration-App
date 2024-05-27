@@ -36,6 +36,29 @@ io.on("connection", (socket) => {
       });
     });
   });
+
+  // sync the code
+  socket.on("code-change", ({ roomId, code }) => {
+    socket.in(roomId).emit("code-change", { code });
+  });
+  // when new user join the room all the code which are there are also shows on that persons editor
+  socket.on("sync-code", ({ socketId, code }) => {
+    io.to(socketId).emit("code-change", { code });
+  });
+
+  socket.on("disconnecting", () => {
+    const rooms = [...socket.rooms];
+    // leave all the room
+    rooms.forEach((roomId) => {
+      socket.in(roomId).emit("disconnected", {
+        socketId: socket.id,
+        username: userSocketMap[socket.id],
+      });
+    });
+
+    delete userSocketMap[socket.id];
+    socket.leave();
+  });
 });
 
 const PORT = process.env.PORT || 5000;
