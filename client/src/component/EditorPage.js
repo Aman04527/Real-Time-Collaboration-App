@@ -7,13 +7,12 @@ import {
   useNavigate,
   Navigate,
 } from "react-router-dom";
-import { initSocket } from "../socket";
+import initSocket from "../socket";
 import { toast } from "react-hot-toast";
 
 function EditorPage() {
   const [clients, setClients] = useState([]);
   const codeRef = useRef(null);
-
   const socketRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,12 +33,12 @@ function EditorPage() {
 
         // Listen for new clients joining the chatroom
         socketRef.current.on("joined", ({ clients, username, socketId }) => {
-          // this insure that new user connected message do not display to that user itself
-          if (username !== Location.state?.username) {
+          // Ensure that the new user connected message does not display to the user itself
+          if (username !== location.state?.username) {
             toast.success(`${username} joined the room.`);
           }
           setClients(clients);
-          // // also send the code to sync
+          // Also send the code to sync
           socketRef.current.emit("sync-code", {
             code: codeRef.current,
             socketId,
@@ -67,7 +66,7 @@ function EditorPage() {
 
     init();
 
-    //clean up
+    // Clean up
     return () => {
       socketRef.current.disconnect();
       socketRef.current.off("joined");
@@ -85,12 +84,16 @@ function EditorPage() {
       toast.success(`RoomId is copied`);
     } catch (error) {
       console.log(error);
-      toast.error("unable to copy the room Id");
+      toast.error("Unable to copy the room Id");
     }
   };
 
   const leaveRoom = async () => {
     navigate("/");
+  };
+
+  const navigateToWhiteboard = () => {
+    navigate(`/whiteboard/${roomId}`);
   };
 
   return (
@@ -107,7 +110,14 @@ function EditorPage() {
             style={{ maxWidth: "150px", marginTop: "15px" }}
           />
           <hr />
-          {/* client list container */}
+          <button
+            onClick={navigateToWhiteboard}
+            className="btn btn-primary my-3"
+          >
+            Whiteboard
+          </button>
+          {/* <hr /> */}
+          {/* Client list container */}
           <div className="d-flex flex-column overflow-auto">
             {clients.map((client) => (
               <Client key={client.socketId} username={client.username} />
